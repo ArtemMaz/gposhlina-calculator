@@ -1,59 +1,90 @@
-name: Build APK
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор госпошлины</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Калькулятор госпошлины</h1>
+        <label for="amount">Введите сумму иска (руб.):</label>
+        <input type="number" id="amount" placeholder="Введите сумму">
+        <label>
+            <input type="checkbox" id="isCourtOrder"> Судебный приказ
+        </label>
+        <button onclick="calculate()">Рассчитать</button>
+        <div class="result" id="result"></div>
+    </div>
 
-on:
-  push:
-    branches:
-      - main
+    <script>
+        function calculate() {
+            const amount = parseFloat(document.getElementById('amount').value);
+            const isCourtOrder = document.getElementById('isCourtOrder').checked;
+            let resultText = '';
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+            let fee = 0;
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+            // Расчет госпошлины
+            if (amount <= 100000) {
+                fee = 4000;
+            } else if (amount <= 300000) {
+                fee = 4000 + (amount - 100000) * 0.03;
+            } else if (amount <= 500000) {
+                fee = 10000 + (amount - 300000) * 0.025;
+            } else if (amount <= 1000000) {
+                fee = 15000 + (amount - 500000) * 0.02;
+            } else if (amount <= 3000000) {
+                fee = 25000 + (amount - 1000000) * 0.01;
+            } else if (amount <= 8000000) {
+                fee = 45000 + (amount - 3000000) * 0.007;
+            } else if (amount <= 24000000) {
+                fee = 80000 + (amount - 8000000) * 0.0035;
+            } else if (amount <= 50000000) {
+                fee = 136000 + (amount - 24000000) * 0.003;
+            } else if (amount <= 100000000) {
+                fee = 214000 + (amount - 50000000) * 0.002;
+            } else {
+                fee = 314000 + (amount - 100000000) * 0.0015;
+                fee = Math.min(fee, 900000);
+            }
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
+            // Учет судебного приказа
+            if (isCourtOrder) {
+                fee *= 0.5;
+                resultText = `Судебный приказ подается Мировому судье. Госпошлина: ${fee.toFixed(2)} руб.`;
+            } else {
+                resultText = `Госпошлина: ${fee.toFixed(2)} руб. `;
 
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli
+                // Определение подсудности
+                if (amount <= 50000) {
+                    resultText += "Исковое заявление предъявляется Мировому судье.";
+                } else {
+                    resultText += "Исковое заявление предъявляется в районный суд.";
+                }
+            }
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install Android platform
-        run: npm install @capacitor/android
-
-      - name: Build web app
-        run: |
-          mkdir -p dist
-          cp index.html dist/
-          echo "Web app built!"
-
-      - name: Initialize Capacitor
-        run: |
-          npx cap init MyApp com.example.myapp
-          npx cap add android
-
-      - name: Copy web assets to Android project
-        run: npx cap copy android
-
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Build APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: gposhlina-calculator.apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+            document.getElementById('result').innerText = resultText;
+        }
+    </script>
+</body>
+</html>
